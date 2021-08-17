@@ -73,8 +73,7 @@ func EditTag(c *gin.Context) {
 	if err == nil {
 		code = e.SUCCESS
 		if models.ExistTagByID(id) {
-			data := make(map[string]interface{})
-			models.EditTag(id, data)
+			models.EditTag(id, tag)
 		} else {
 			code = e.ERROR_NOT_EXIST_TAG
 		}

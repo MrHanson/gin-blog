@@ -40,6 +40,7 @@ func GetAuth(c *gin.Context) {
 		} else {
 			data["token"] = token
 			code = e.SUCCESS
+			c.SetCookie("token", token, 1000, "/", "127.0.0.1", false, true)
 		}
 	} else {
 		logging.Warn("账号或密码有误")

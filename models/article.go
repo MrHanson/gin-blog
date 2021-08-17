@@ -1,11 +1,5 @@
 package models
 
-import (
-	"time"
-
-	"gorm.io/gorm"
-)
-
 type Article struct {
 	Model
 
@@ -16,20 +10,8 @@ type Article struct {
 	Desc       string `json:"desc"`
 	Content    string `json:"content"`
 	CreatedBy  string `json:"created_by" binding:"required"`
-	ModifiedBy string `json:"modified_by" validate:"max=100"`
+	ModifiedBy string `json:"modified_by"`
 	State      int    `json:"state" validate:"oneof'0 1"`
-}
-
-func (article *Article) BeforeCreate(tx *gorm.DB) (err error) {
-	article.CreatedOn = int(time.Now().Unix())
-
-	return nil
-}
-
-func (article *Article) BeforeUpdate(tx *gorm.DB) (err error) {
-	article.ModifiedOn = int(time.Now().Unix())
-
-	return nil
 }
 
 func ExistArticleByName(name string) bool {

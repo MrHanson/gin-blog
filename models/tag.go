@@ -1,11 +1,5 @@
 package models
 
-import (
-	"time"
-
-	"gorm.io/gorm"
-)
-
 type Tag struct {
 	Model
 
@@ -13,18 +7,6 @@ type Tag struct {
 	CreatedBy  string `json:"created_by" binding:"required"`
 	ModifiedBy string `json:"modified_by" validate:"max=100"`
 	State      int    `json:"state" validate:"oneof'0 1"`
-}
-
-func (tag *Tag) BeforeCreate(tx *gorm.DB) (err error) {
-	tag.CreatedOn = int(time.Now().Unix())
-
-	return nil
-}
-
-func (tag *Tag) BeforeUpdate(tx *gorm.DB) (err error) {
-	tag.ModifiedOn = int(time.Now().Unix())
-
-	return nil
 }
 
 func ExistTagByName(name string) bool {
@@ -43,9 +25,10 @@ func ExistTagByID(id int) bool {
 
 func AddTag(name string, state int, createdBy string) bool {
 	db.Create(&Tag{
-		Name:      name,
-		CreatedBy: createdBy,
-		State:     state,
+		Name:       name,
+		CreatedBy:  createdBy,
+		ModifiedBy: createdBy,
+		State:      state,
 	})
 
 	return true

@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ type Model struct {
 	ID         int `gorm:"primary_key" json:"id"`
 	CreatedOn  int `json:"created_on"`
 	ModifiedOn int `json:"modified_on"`
-	DeleteOn   int `json:"delete_on"`
+	DeletedOn  int `json:"deleted_on"`
 }
 
 func init() {
@@ -45,6 +46,9 @@ func init() {
 		},
 	})
 
+	db.Callback().Create().Before("gorm:create").Register("update_time_stamp", updateTimeStampForCreateCallback)
+	db.Callback().Update().Before("gorm:update").Register("update_time_stamp", updateTimeStampForUpdateCallback)
+
 	if err != nil {
 		log.Println(err)
 	}
@@ -53,4 +57,25 @@ func init() {
 func CloseDB() {
 	sqlDB, _ := db.DB()
 	defer sqlDB.Close()
+}
+
+func updateTimeStampForCreateCallback(db *gorm.DB) {
+	nowTime := time.Now().Unix()
+	updateFieldValue("CreatedOn", nowTime, db)
+	updateFieldValue("ModifiedOn", nowTime, db)
+}
+
+func updateTimeStampForUpdateCallback(db *gorm.DB) {
+	nowTime := time.Now().Unix()
+	updateFieldValue("ModifiedOn", nowTime, db)
+}
+
+func updateFieldValue(name string, value interface{}, db *gorm.DB) {
+	schema := db.Statement.Schema
+	if schema == nil {
+		return
+	}
+	if modifyTimeField, ok := schema.FieldsByName[name]; ok {
+		modifyTimeField.Set(db.Statement.ReflectValue, value)
+	}
 }
