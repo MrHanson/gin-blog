@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/MrHanson/gin-blog/middleware/jwt"
 	"github.com/MrHanson/gin-blog/pkg/setting"
+	"github.com/MrHanson/gin-blog/pkg/upload"
 	"github.com/MrHanson/gin-blog/routers/api"
 	v1 "github.com/MrHanson/gin-blog/routers/api/v1"
 )
@@ -39,6 +41,8 @@ func InitRouter() *gin.Engine {
 	r.Use(gin.Recovery())
 
 	gin.SetMode(setting.ServerSetting.RunMode)
+
+	r.StaticFS("/upload/images", http.Dir(upload.GetImageFullPath()))
 
 	r.POST("/auth", api.GetAuth)
 	r.POST("/upload", api.UploadImage)

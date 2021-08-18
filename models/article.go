@@ -6,12 +6,13 @@ type Article struct {
 	TagID int `json:"tag_id" gorm:"index"`
 	Tag   Tag `json:"tag"`
 
-	Title      string `json:"title" binding:"required" validate:"max=100"`
-	Desc       string `json:"desc"`
-	Content    string `json:"content"`
-	CreatedBy  string `json:"created_by" binding:"required"`
-	ModifiedBy string `json:"modified_by"`
-	State      int    `json:"state" validate:"oneof'0 1"`
+	Title         string `json:"title" binding:"required" validate:"max=100"`
+	Desc          string `json:"desc"`
+	Content       string `json:"content"`
+	CoverImageUrl string `json:"cover"`
+	CreatedBy     string `json:"created_by" binding:"required"`
+	ModifiedBy    string `json:"modified_by"`
+	State         int    `json:"state" validate:"oneof'0 1"`
 }
 
 func ExistArticleByName(name string) bool {
@@ -30,12 +31,13 @@ func ExistArticleByID(id int) bool {
 
 func AddArticle(data map[string]interface{}) bool {
 	db.Create(&Article{
-		TagID:     data["tag_id"].(int),
-		Title:     data["title"].(string),
-		Desc:      data["desc"].(string),
-		Content:   data["content"].(string),
-		CreatedBy: data["created_by"].(string),
-		State:     data["state"].(int),
+		TagID:         data["tag_id"].(int),
+		Title:         data["title"].(string),
+		Desc:          data["desc"].(string),
+		Content:       data["content"].(string),
+		CoverImageUrl: data["cover"].(string),
+		CreatedBy:     data["created_by"].(string),
+		State:         data["state"].(int),
 	})
 
 	return true
