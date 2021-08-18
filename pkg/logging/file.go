@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/MrHanson/gin-blog/pkg/file"
@@ -33,7 +34,7 @@ func openLogFile(fileName, filePath string) (*os.File, error) {
 		return nil, fmt.Errorf("os.Getwd err: %v", err)
 	}
 
-	src := dir + "/" + filePath
+	src := filepath.Join(dir, filePath)
 	perm := file.CheckPremission(src)
 	if perm {
 		return nil, fmt.Errorf("file.CheckPermission Permission denied src: %s", src)
@@ -44,18 +45,10 @@ func openLogFile(fileName, filePath string) (*os.File, error) {
 		return nil, fmt.Errorf("file.IsNotExistMkDir src %s, err: %v", src, err)
 	}
 
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(filepath.Join(src, fileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Fail to OpenFile %v", err)
 	}
 
 	return f, nil
-}
-
-func mkDir() {
-	dir, _ := os.Getwd()
-	err := os.MkdirAll(dir+"/"+setting.AppSetting.RuntimeRootPath, os.ModePerm)
-	if err != nil {
-		panic(err)
-	}
 }

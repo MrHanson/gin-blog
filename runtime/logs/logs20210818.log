@@ -1,0 +1,2 @@
+[WARN][upload.go:34]2021/08/18 17:33:58 [file.IsNotExistMkDir src runtime/upload/images, err: mkdir D:\Gopher\src\gin-blog\runtime\upload\images: The system cannot find the path specified.]
+[WARN][upload.go:34]2021/08/18 17:36:56 [file.IsNotExistMkDir src runtime/upload/images, err: mkdir D:\Gopher\src\gin-blog\runtime\upload\images: The system cannot find the path specified.]

@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"os"
@@ -41,6 +42,7 @@ func IsNotExistMkDir(src string) error {
 }
 
 func MkDir(src string) error {
+	fmt.Println("MkDir:", src)
 	err := os.Mkdir(src, os.ModePerm)
 	if err != nil {
 		return err
