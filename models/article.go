@@ -1,5 +1,7 @@
 package models
 
+import "gorm.io/gorm"
+
 type Article struct {
 	Model
 
@@ -22,15 +24,22 @@ func ExistArticleByName(name string) bool {
 	return article.ID > 0
 }
 
-func ExistArticleByID(id int) bool {
+func ExistArticleByID(id int) (bool, error) {
 	var article Article
-	db.Select("id").Where("id = ?", id).First(&article)
+	err := db.Select("id").Where("id = ? AND deleted_on = ?", id, 0).First(&article).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return false, nil
+	}
 
-	return article.ID > 0
+	if article.ID > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
-func AddArticle(data map[string]interface{}) bool {
-	db.Create(&Article{
+func AddArticle(data map[string]interface{}) error {
+	article := Article{
 		TagID:         data["tag_id"].(int),
 		Title:         data["title"].(string),
 		Desc:          data["desc"].(string),
@@ -38,39 +47,64 @@ func AddArticle(data map[string]interface{}) bool {
 		CoverImageUrl: data["cover"].(string),
 		CreatedBy:     data["created_by"].(string),
 		State:         data["state"].(int),
-	})
+	}
 
-	return true
+	if err := db.Create(&article).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func DeleteArticle(id int) bool {
-	db.Where("id = ?", id).Delete(&Article{})
+func DeleteArticle(id int) error {
+	if err := db.Where("id = ?", id).Delete(&Article{}).Error; err != nil {
+		return err
+	}
 
-	return true
+	return nil
 }
 
-func EditArticle(id int, data interface{}) bool {
-	db.Model(&Article{}).Where("id = ?", id).Updates(data)
+// EditArticle modify a single article
+func EditArticle(id int, data interface{}) error {
+	if err := db.Model(&Article{}).Where("id = ? AND deleted_on = ?", id, 0).Updates(data).Error; err != nil {
+		return err
+	}
 
-	return true
+	return nil
 }
 
-func GetArticle(id int) (article Article) {
-	db.Where("id = ?", id).First(&article)
-	db.Model(&article).Joins("Tag").Find(&article)
+// GetArticle Get a single article based on ID
+func GetArticle(id int) (*Article, error) {
+	var article Article
+	err := db.Where("id = ? AND delete_on = ?", id, 0).First(&article).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
 
-	return
+	err = db.Model(&article).Joins("Tag").Find(&article).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	return &article, nil
 }
 
-func GetArticles(pageNum int, pageSize int, maps interface{}) (articles []Article) {
-	db.Preload("Tag").Where(maps).Offset(pageNum).Limit(pageSize).Find(&articles)
+func GetArticles(pageNum int, pageSize int, maps interface{}) ([]*Article, error) {
+	var articles []*Article
+	err := db.Preload("Tag").Where(maps).Offset(pageNum).Limit(pageSize).Find(&articles).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
 
-	return
+	return articles, nil
 }
 
-func GetArticleTotal(maps interface{}) (count int) {
-	c := int64(count)
-	db.Model(&Article{}).Where(maps).Count(&c)
+func GetArticleTotal(maps interface{}) (int64, error) {
+	var count int64
 
-	return
+	if err := db.Model(&Article{}).Where(maps).Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
