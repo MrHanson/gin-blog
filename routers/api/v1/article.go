@@ -13,10 +13,11 @@ import (
 	"github.com/MrHanson/gin-blog/pkg/setting"
 	"github.com/MrHanson/gin-blog/pkg/util"
 	"github.com/MrHanson/gin-blog/service/article_service"
+	"github.com/MrHanson/gin-blog/service/tag_service"
 )
 
 func GetArticle(c *gin.Context) {
-	appG := app.Gin{c}
+	appG := app.Gin{C: c}
 	id := com.StrTo(c.Param("id")).MustInt()
 
 	code := e.INVALID_PARAMS
@@ -91,41 +92,40 @@ func GetArticles(c *gin.Context) {
 }
 
 func AddArticle(c *gin.Context) {
+	appG := app.Gin{C: c}
 	var article models.Article
 	err := c.ShouldBindJSON(&article)
-
-	tagId := article.TagID
-	title := article.Title
-	desc := article.Desc
-	cover := article.CoverImageUrl
-	content := article.Content
-	createdBy := article.CreatedBy
-	state := article.State
-
-	code := e.INVALID_PARAMS
-	if err == nil {
-		if models.ExistTagByID(tagId) {
-			data := make(map[string]interface{})
-			data["tag_id"] = tagId
-			data["title"] = title
-			data["desc"] = desc
-			data["cover"] = cover
-			data["content"] = content
-			data["created_by"] = createdBy
-			data["state"] = state
-
-			models.AddArticle(data)
-			code = e.SUCCESS
-		} else {
-			code = e.ERROR_EXIST_TAG
-		}
+	if err != nil {
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  e.GetMsg(code),
-		"data": make(map[string]string),
-	})
+	tagService := tag_service.Tag{ID: article.TagID}
+	exists, err := tagService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_EXIST_TAG_FAIL, nil)
+		return
+	}
+	if !exists {
+		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_TAG, nil)
+		return
+	}
+
+	articleService := article_service.Article{
+		TagID:         article.TagID,
+		Title:         article.Title,
+		Desc:          article.Desc,
+		Content:       article.Content,
+		CoverImageUrl: article.CoverImageUrl,
+		State:         article.State,
+		CreatedBy:     article.CreatedBy,
+	}
+	if err := articleService.Add(); err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_ADD_ARTICLE_FAIL, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }
 
 func EditArticle(c *gin.Context) {

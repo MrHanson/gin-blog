@@ -8,37 +8,42 @@ import (
 	"github.com/unknwon/com"
 
 	"github.com/MrHanson/gin-blog/models"
+	"github.com/MrHanson/gin-blog/pkg/app"
 	"github.com/MrHanson/gin-blog/pkg/e"
 	"github.com/MrHanson/gin-blog/pkg/setting"
 	"github.com/MrHanson/gin-blog/pkg/util"
+	"github.com/MrHanson/gin-blog/service/tag_service"
 )
 
 func GetTags(c *gin.Context) {
+	appG := app.Gin{C: c}
 	name := c.Query("name")
-
-	maps := make(map[string]interface{})
-	data := make(map[string]interface{})
-
-	if name != "" {
-		maps["name"] = name
-	}
-
-	var state = -1
-	arg := c.Query("state")
-	if arg != "" {
+	state := -1
+	if arg := c.Query("state"); arg != "" {
 		state = com.StrTo(arg).MustInt()
-		maps["state"] = state
 	}
 
-	code := e.SUCCESS
+	tagService := tag_service.Tag{
+		Name:     name,
+		State:    state,
+		PageNum:  util.GetPage(c),
+		PageSize: setting.AppSetting.PageSize,
+	}
+	tags, err := tagService.GetAll()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_GET_TAGS_FAIL, nil)
+		return
+	}
 
-	data["lists"] = models.GetTags(util.GetPage(c), setting.AppSetting.PageSize, maps)
-	data["total"] = models.GetTagTotal(maps)
+	count, err := tagService.Count()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_COUNT_TAG_FAIL, nil)
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  e.GetMsg(code),
-		"data": data,
+	appG.Response(http.StatusOK, e.SUCCESS, map[string]interface{}{
+		"lists": tags,
+		"total": count,
 	})
 }
 
@@ -46,62 +51,97 @@ func AddTag(c *gin.Context) {
 	var tag models.Tag
 	err := c.ShouldBindJSON(&tag)
 
-	name := tag.Name
-	code := e.INVALID_PARAMS
-	if err == nil {
-		if !models.ExistTagByName(name) {
-			code = e.SUCCESS
-			models.AddTag(name, tag.State, tag.CreatedBy)
-		} else {
-			code = e.ERROR_EXIST_TAG
-		}
+	var appG = app.Gin{C: c}
+
+	if err != nil {
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  e.GetMsg(code),
-		"data": make(map[string]string),
-	})
+	tagService := tag_service.Tag{
+		Name:      tag.Name,
+		CreatedBy: tag.CreatedBy,
+		State:     tag.State,
+	}
+	exists, err := tagService.ExistByName()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_EXIST_TAG_FAIL, nil)
+		return
+	}
+	if exists {
+		appG.Response(http.StatusOK, e.ERROR_EXIST_TAG, nil)
+		return
+	}
+
+	err = tagService.Add()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_ADD_TAG_FAIL, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }
 
 func EditTag(c *gin.Context) {
+	appG := app.Gin{C: c}
 	id := com.StrTo(c.Param("id")).MustInt()
 
 	var tag models.Tag
+	tag.ID = id
 	err := c.ShouldBindJSON(&tag)
-	code := e.INVALID_PARAMS
-	if err == nil {
-		code = e.SUCCESS
-		if models.ExistTagByID(id) {
-			models.EditTag(id, tag)
-		} else {
-			code = e.ERROR_NOT_EXIST_TAG
-		}
+	if err != nil {
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  e.GetMsg(code),
-		"data": make(map[string]string),
-	})
+	tagService := tag_service.Tag{
+		ID:         tag.ID,
+		Name:       tag.Name,
+		ModifiedBy: tag.ModifiedBy,
+		State:      tag.State,
+	}
+
+	exist, err := tagService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_EXIST_TAG_FAIL, nil)
+		return
+	}
+
+	if !exist {
+		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_TAG, nil)
+		return
+	}
+
+	err = tagService.Edit()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_EDIT_TAG_FAIL, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
+
 }
 
 func DeleteTag(c *gin.Context) {
+	appG := app.Gin{C: c}
 	id := com.StrTo(c.Param("id")).MustInt()
 
-	code := e.INVALID_PARAMS
-	if id > 0 {
-		code = e.SUCCESS
-		if models.ExistTagByID(id) {
-			models.DeleteTag(id)
-		} else {
-			code = e.ERROR_NOT_EXIST_TAG
-		}
+	tagService := tag_service.Tag{ID: id}
+	exists, err := tagService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_EXIST_TAG_FAIL, nil)
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  e.GetMsg(code),
-		"data": make(map[string]string),
-	})
+	if !exists {
+		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_TAG, nil)
+		return
+	}
+
+	if err := tagService.Delete(); err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_DELETE_TAG_FAIL, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }
