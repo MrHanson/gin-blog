@@ -16,3 +16,11 @@ func (g *Gin) Response(httpCode, errCode int, data interface{}) {
 		"data": data,
 	})
 }
+
+func (g *Gin) Abort() {
+	g.C.Abort()
+}
+
+func (g *Gin) Next() {
+	g.C.Next()
+}

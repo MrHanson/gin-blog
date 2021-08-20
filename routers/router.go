@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/MrHanson/gin-blog/middleware/jwt"
+	"github.com/MrHanson/gin-blog/pkg/export"
 	"github.com/MrHanson/gin-blog/pkg/setting"
 	"github.com/MrHanson/gin-blog/pkg/upload"
 	"github.com/MrHanson/gin-blog/routers/api"
@@ -43,6 +44,7 @@ func InitRouter() *gin.Engine {
 	gin.SetMode(setting.ServerSetting.RunMode)
 
 	r.StaticFS("/upload/images", http.Dir(upload.GetImageFullPath()))
+	r.StaticFS("/export", http.Dir(export.GetExcelFullPath()))
 
 	r.POST("/auth", api.GetAuth)
 	r.POST("/upload", api.UploadImage)
@@ -58,6 +60,10 @@ func InitRouter() *gin.Engine {
 		apiv1.PUT("/tags/:id", v1.EditTag)
 		//删除指定标签
 		apiv1.DELETE("/tags/:id", v1.DeleteTag)
+		//导出标签
+		apiv1.POST("/tags/export", v1.ExportTag)
+		//导出标签
+		apiv1.POST("/tags/import", v1.ImportTag)
 
 		apiv1.GET("/article/:id", v1.GetArticle)
 		apiv1.GET("/articles", v1.GetArticles)

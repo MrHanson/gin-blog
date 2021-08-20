@@ -2,17 +2,17 @@ package tag_service
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
 	"time"
 
-	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/MrHanson/gin-blog/models"
-	"github.com/MrHanson/gin-blog/pkg/file"
+	"github.com/MrHanson/gin-blog/pkg/export"
 	"github.com/MrHanson/gin-blog/pkg/gredis"
 	"github.com/MrHanson/gin-blog/pkg/logging"
 	"github.com/MrHanson/gin-blog/service/cache_service"
-	"github.com/tealeg/xlsx"
+	"github.com/xuri/excelize/v2"
 )
 
 type Tag struct {
@@ -88,28 +88,32 @@ func (t *Tag) GetAll() ([]models.Tag, error) {
 	return tags, nil
 }
 
+const EXPORT_SHEET_NAME = "标签信息"
+
+func getRowAxis(index int64) string {
+	ret := fmt.Sprintf("%c", 65+index)
+	if index > 25 {
+		return ret + getRowAxis(index-25)
+	}
+
+	return ret
+}
+
 func (t *Tag) Export() (string, error) {
 	tags, err := t.GetAll()
 	if err != nil {
 		return "", err
 	}
 
-	xlsFile := xlsx.NewFile()
-	sheet, err := xlsFile.AddSheet("标签信息")
-	if err != nil {
-		return "", err
-	}
+	f := excelize.NewFile()
+	index := f.NewSheet(EXPORT_SHEET_NAME)
 
 	titles := []string{"ID", "名称", "创建人", "创建时间", "修改人", "修改时间"}
-	row := sheet.AddRow()
+	// set title
+	f.SetSheetRow(EXPORT_SHEET_NAME, "A1", titles)
 
-	var cell *xlsx.Cell
-	for _, title := range titles {
-		cell = row.AddCell()
-		cell.Value = title
-	}
-
-	for _, v := range tags {
+	// set data content
+	for j, v := range tags {
 		values := []string{
 			strconv.Itoa(v.ID),
 			v.Name,
@@ -119,24 +123,16 @@ func (t *Tag) Export() (string, error) {
 			strconv.Itoa(v.ModifiedOn),
 		}
 
-		row = sheet.AddRow()
-		for _, value := range values {
-			cell = row.AddCell()
-			cell.Value = value
-		}
+		f.SetSheetRow(EXPORT_SHEET_NAME, getRowAxis(int64(j)), values)
+
 	}
+	// Set active sheet of the workbook.
+	f.SetActiveSheet(index)
 
 	time := strconv.Itoa(int(time.Now().Unix()))
-	filename := "tags-" + time + export.EXT
-
-	dirFullPath := export.GetExcelFullPath()
-	err = file.IsNotExistMkDir(dirFullPath)
-	if err != nil {
-		return "", err
-	}
-
-	err = xlsFile.Save(dirFullPath + filename)
-	if err != nil {
+	filename := "tags-" + time + ".xlsx"
+	fullPath := export.GetExcelFullPath() + filename
+	if err := f.SaveAs(fullPath); err != nil {
 		return "", err
 	}
 
@@ -149,16 +145,18 @@ func (t *Tag) Import(r io.Reader) error {
 		return err
 	}
 
-	rows := xlsx.GetRows("标签信息")
+	rows, err := xlsx.GetRows(EXPORT_SHEET_NAME)
+	if err != nil {
+		return err
+	}
 	for irow, row := range rows {
-		if irow > 0 {
-			var data []string
-			for _, cell := range row {
-				data = append(data, cell)
-			}
-
-			models.AddTag(data[1], 1, data[2])
+		if irow < 0 {
+			continue
 		}
+		var data []string
+		data = append(data, row...)
+
+		models.AddTag(data[1], 1, data[2])
 	}
 
 	return nil
