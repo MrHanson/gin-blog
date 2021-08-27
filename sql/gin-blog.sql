@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS `blog_tag` (
 
 CREATE TABLE IF NOT EXISTS `blog_article` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `tag_id` int(10) unsigned DEFAULT '0' COMMENT '标签ID',
   `title` varchar(100) DEFAULT '' COMMENT '文章标题',
   `desc` varchar(255) DEFAULT '' COMMENT '简述',
   `cover_image_url` varchar(255) DEFAULT '' COMMENT '文章封面'
@@ -27,6 +26,13 @@ CREATE TABLE IF NOT EXISTS `blog_article` (
   `state` tinyint(3) unsigned DEFAULT '1' COMMENT '状态 0为禁用1为启用',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='文章管理';
+
+CREATE TABLE IF NOT EXISTS `blog_article_tag` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `article_id` int(10) unsigned NOT NULL COMMENT '文章主键',
+  `tag_id` int(10) unsigned NOT NULL COMMENT '标签主键',
+  PRIMARY KEY(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='文章标签关联表';
 
 CREATE TABLE IF NOT EXISTS `blog_auth` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
